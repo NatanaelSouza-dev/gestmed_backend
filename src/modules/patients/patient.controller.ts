@@ -28,6 +28,22 @@ export async function updatePatientController(
 	return reply.status(200).send(patient)
 }
 
+export async function regeneratePatientCredentialsController(
+	request: FastifyRequest<{ Params: { id: string } }>,
+	reply: FastifyReply,
+) {
+	const pdfBuffer = await service.regeneratePatientCredentials(request.params.id)
+
+	return reply
+		.header('Content-Type', 'application/pdf')
+		.header(
+			'Content-Disposition',
+			'attachment; filename="credenciais-paciente.pdf"',
+		)
+		.status(200)
+		.send(pdfBuffer)
+}
+
 export async function listPatientsController(
 	_request: FastifyRequest,
 	reply: FastifyReply,

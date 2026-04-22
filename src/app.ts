@@ -12,8 +12,12 @@ import { AppError } from './shared/errors/app-error'
 
 export function buildApp() {
 	const app = Fastify({ logger: false })
+	const allowedOrigin = process.env.PATIENT_ACCESS_URL
 
-	app.register(cors)
+	app.register(cors, {
+		origin: allowedOrigin ?? false,
+		credentials: true,
+	})
 	app.register(multipart, {
 		limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
 	})

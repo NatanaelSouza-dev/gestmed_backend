@@ -1,17 +1,38 @@
 import { randomBytes } from 'crypto'
 import bcrypt from 'bcryptjs'
-import { prisma } from '../../shared/lib/prisma'
-import { generateCredentialsPDF } from '../../shared/lib/pdf'
 import { AppError } from '../../shared/errors/app-error'
+import { generateCredentialsPDF } from '../../shared/lib/pdf'
+import { prisma } from '../../shared/lib/prisma'
 import type { CreatePatientInput, UpdatePatientInput } from './patient.schema'
 
-// Caracteres sem ambiguidade visual (sem 0/O, 1/I) — facilita leitura para idosos
+// Caracteres sem ambiguidade visual (sem 0/O, 1/I) para facilitar leitura.
 const PASSWORD_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 
 function generatePassword(): string {
 	return Array.from(randomBytes(8))
 		.map((b) => PASSWORD_CHARS[b % PASSWORD_CHARS.length])
 		.join('')
+}
+
+async function generatePatientCredentialsPDF(patient: {
+	id: string
+	name: string
+	cpf: string
+}): Promise<Buffer> {
+	const rawPassword = generatePassword()
+	const hashedPassword = await bcrypt.hash(rawPassword, 10)
+
+	await prisma.patient.update({
+		where: { id: patient.id },
+		data: { password: hashedPassword },
+	})
+
+	return generateCredentialsPDF({
+		name: patient.name,
+		cpf: patient.cpf,
+		password: rawPassword,
+		accessUrl: process.env.PATIENT_ACCESS_URL!,
+	})
 }
 
 export async function createPatient(data: CreatePatientInput): Promise<Buffer> {
@@ -30,14 +51,27 @@ export async function createPatient(data: CreatePatientInput): Promise<Buffer> {
 		},
 	})
 
-	const pdf = await generateCredentialsPDF({
+	return generateCredentialsPDF({
 		name: patient.name,
 		cpf: patient.cpf,
 		password: rawPassword,
 		accessUrl: process.env.PATIENT_ACCESS_URL!,
 	})
+}
 
-	return pdf
+export async function regeneratePatientCredentials(id: string): Promise<Buffer> {
+	const patient = await prisma.patient.findUnique({
+		where: { id },
+		select: {
+			id: true,
+			name: true,
+			cpf: true,
+		},
+	})
+
+	if (!patient) throw new AppError('Paciente não encontrado', 404)
+
+	return generatePatientCredentialsPDF(patient)
 }
 
 export async function updatePatient(id: string, data: UpdatePatientInput) {
@@ -84,6 +118,8 @@ export async function getPatient(id: string) {
 			createdAt: true,
 		},
 	})
+
 	if (!patient) throw new AppError('Paciente não encontrado', 404)
+
 	return patient
 }
