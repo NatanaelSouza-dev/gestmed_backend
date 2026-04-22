@@ -1,0 +1,52 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id         String      @id @default(cuid())
+  name       String
+  email      String      @unique
+  cpf        String      @unique
+  createdAt  DateTime    @default(now())
+  magicLinks MagicLink[]
+}
+
+model MagicLink {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  adminId   String
+  admin     Admin     @relation(fields: [adminId], references: [id])
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([token])
+}
+
+model Patient {
+  id        String   @id @default(cuid())
+  name      String
+  cpf       String   @unique
+  birthDate DateTime
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  exams     Exam[]
+}
+
+model Exam {
+  id        String   @id @default(cuid())
+  patientId String
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  examDate  DateTime
+  examType  String
+  fileKey   String
+  createdAt DateTime @default(now())
+
+  @@index([patientId])
+}
