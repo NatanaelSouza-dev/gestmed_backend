@@ -2,6 +2,7 @@ import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import multipart from '@fastify/multipart'
 import rateLimit from '@fastify/rate-limit'
+import fs from 'fs'
 import { ZodError } from 'zod'
 import { jwtPlugin } from './shared/plugins/jwt.plugin'
 import { adminAuthRoutes } from './modules/auth/admin/admin-auth.routes'
@@ -9,6 +10,7 @@ import { patientAuthRoutes } from './modules/auth/patient/patient-auth.routes'
 import { patientRoutes } from './modules/patients/patient.routes'
 import { examRoutes } from './modules/exams/exam.routes'
 import { AppError } from './shared/errors/app-error'
+import { getPublicAssets } from './shared/lib/branding'
 
 export function buildApp() {
 	const app = Fastify({ logger: false })
@@ -30,6 +32,21 @@ export function buildApp() {
 		}),
 	})
 	app.register(jwtPlugin)
+
+	app.get('/public-assets/:filename', async (request, reply) => {
+		const { filename } = request.params as { filename: string }
+		const files = getPublicAssets()
+		const file = files[filename as keyof typeof files]
+		if (!file) {
+			return reply.status(404).send({ message: 'Arquivo nao encontrado' })
+		}
+
+		if (!fs.existsSync(file.path)) {
+			return reply.status(404).send({ message: 'Arquivo nao encontrado' })
+		}
+
+		return reply.type(file.contentType).send(fs.createReadStream(file.path))
+	})
 
 	app.setErrorHandler((error, _request, reply) => {
 		if (error instanceof AppError) {

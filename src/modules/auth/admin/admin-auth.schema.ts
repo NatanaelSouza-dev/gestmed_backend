@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 export const requestMagicLinkSchema = z.object({
-	email: z.string().email('Email inválido'),
+	email: z.string().email('E-mail inválido'),
 })
 
 export const verifyMagicLinkSchema = z.object({

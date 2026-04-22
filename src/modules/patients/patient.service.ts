@@ -35,6 +35,13 @@ async function generatePatientCredentialsPDF(patient: {
 	})
 }
 
+export function buildPatientCredentialsFilename(name: string, date = new Date()): string {
+	const formattedName = sanitizeFilenamePart(name)
+	const formattedDate = formatFilenameDate(date)
+
+	return `credenciais_${formattedName}_${formattedDate}.pdf`
+}
+
 export async function createPatient(data: CreatePatientInput): Promise<Buffer> {
 	const existing = await prisma.patient.findUnique({ where: { cpf: data.cpf } })
 	if (existing) throw new AppError('CPF já cadastrado')
@@ -72,6 +79,17 @@ export async function regeneratePatientCredentials(id: string): Promise<Buffer> 
 	if (!patient) throw new AppError('Paciente não encontrado', 404)
 
 	return generatePatientCredentialsPDF(patient)
+}
+
+export async function getPatientCredentialsFilename(id: string): Promise<string> {
+	const patient = await prisma.patient.findUnique({
+		where: { id },
+		select: { name: true },
+	})
+
+	if (!patient) throw new AppError('Paciente não encontrado', 404)
+
+	return buildPatientCredentialsFilename(patient.name)
 }
 
 export async function updatePatient(id: string, data: UpdatePatientInput) {
@@ -122,4 +140,21 @@ export async function getPatient(id: string) {
 	if (!patient) throw new AppError('Paciente não encontrado', 404)
 
 	return patient
+}
+
+function sanitizeFilenamePart(value: string): string {
+	return value
+		.normalize('NFD')
+		.replace(/[\u0300-\u036f]/g, '')
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '_')
+		.replace(/^_+|_+$/g, '')
+}
+
+function formatFilenameDate(date: Date): string {
+	const year = date.getFullYear()
+	const month = String(date.getMonth() + 1).padStart(2, '0')
+	const day = String(date.getDate()).padStart(2, '0')
+
+	return `${year}${month}${day}`
 }

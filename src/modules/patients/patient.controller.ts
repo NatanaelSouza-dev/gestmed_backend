@@ -8,12 +8,13 @@ export async function createPatientController(
 ) {
 	const data = createPatientSchema.parse(request.body)
 	const pdfBuffer = await service.createPatient(data)
+	const filename = service.buildPatientCredentialsFilename(data.name)
 
 	return reply
 		.header('Content-Type', 'application/pdf')
 		.header(
 			'Content-Disposition',
-			'attachment; filename="credenciais-paciente.pdf"',
+			`attachment; filename="${filename}"`,
 		)
 		.status(201)
 		.send(pdfBuffer)
@@ -33,12 +34,13 @@ export async function regeneratePatientCredentialsController(
 	reply: FastifyReply,
 ) {
 	const pdfBuffer = await service.regeneratePatientCredentials(request.params.id)
+	const filename = await service.getPatientCredentialsFilename(request.params.id)
 
 	return reply
 		.header('Content-Type', 'application/pdf')
 		.header(
 			'Content-Disposition',
-			'attachment; filename="credenciais-paciente.pdf"',
+			`attachment; filename="${filename}"`,
 		)
 		.status(200)
 		.send(pdfBuffer)

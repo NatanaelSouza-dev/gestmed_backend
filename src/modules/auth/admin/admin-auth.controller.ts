@@ -11,7 +11,7 @@ export async function requestMagicLinkController(
 ) {
 	const { email } = requestMagicLinkSchema.parse(request.body)
 	await service.requestMagicLink(email)
-	return reply.status(200).send({ message: 'Link enviado para o email' })
+	return reply.status(200).send({ message: 'Link enviado para o e-mail' })
 }
 
 export async function verifyMagicLinkController(

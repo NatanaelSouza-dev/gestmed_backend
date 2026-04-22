@@ -7,7 +7,7 @@ const EXPIRY_MINUTES = 15
 
 export async function requestMagicLink(email: string): Promise<void> {
 	const admin = await prisma.admin.findUnique({ where: { email } })
-	if (!admin) throw new AppError('Email não cadastrado', 404)
+	if (!admin) throw new AppError('E-mail não cadastrado', 404)
 
 	const token = randomBytes(32).toString('hex')
 	const expiresAt = new Date(Date.now() + EXPIRY_MINUTES * 60 * 1000)
