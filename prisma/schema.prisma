@@ -7,31 +7,29 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Admin {
-  id         String      @id @default(cuid())
-  name       String
-  email      String      @unique
-  cpf        String      @unique
-  createdAt  DateTime    @default(now())
-  magicLinks MagicLink[]
+enum AdminProfile {
+  SUPER_ADMIN
+  ADMIN
+  RECEPCAO
+  GESTOR
 }
 
-model MagicLink {
-  id        String    @id @default(cuid())
-  token     String    @unique
-  adminId   String
-  admin     Admin     @relation(fields: [adminId], references: [id])
-  expiresAt DateTime
-  usedAt    DateTime?
-  createdAt DateTime  @default(now())
-
-  @@index([token])
+model Admin {
+  id                     String    @id @default(cuid())
+  name                   String
+  email                  String    @unique
+  password               String    @default("")
+  profile                AdminProfile @default(ADMIN)
+  passwordResetToken     String?
+  passwordResetExpiresAt DateTime?
+  createdAt              DateTime  @default(now())
 }
 
 model Patient {
   id        String   @id @default(cuid())
   name      String
   cpf       String   @unique
+  whatsapp  String?
   birthDate DateTime
   password  String
   createdAt DateTime @default(now())
@@ -49,4 +47,17 @@ model Exam {
   createdAt DateTime @default(now())
 
   @@index([patientId])
+}
+
+model UserActionLog {
+  id        String   @id @default(cuid())
+  action    String
+  userId    String
+  userName  String
+  userRole  String
+  payload   Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
 }

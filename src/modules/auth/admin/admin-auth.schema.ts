@@ -1,12 +1,17 @@
 import { z } from 'zod'
 
-export const requestMagicLinkSchema = z.object({
-	email: z.string().email('E-mail inválido'),
+export const adminLoginSchema = z.object({
+	email: z.string().email('E-mail invalido'),
+	password: z.string().min(1, 'Senha obrigatoria'),
 })
 
-export const verifyMagicLinkSchema = z.object({
-	token: z.string().min(1, 'Token inválido'),
+export type AdminLoginInput = z.infer<typeof adminLoginSchema>
+
+export const adminForgotPasswordSchema = z.object({
+	email: z.string().email('E-mail invalido'),
 })
 
-export type RequestMagicLinkInput = z.infer<typeof requestMagicLinkSchema>
-export type VerifyMagicLinkInput = z.infer<typeof verifyMagicLinkSchema>
+export const adminResetPasswordSchema = z.object({
+	token: z.string().min(1, 'Token obrigatorio'),
+	password: z.string().min(8, 'A nova senha deve ter pelo menos 8 caracteres'),
+})

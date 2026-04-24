@@ -1,23 +1,36 @@
 import type { FastifyInstance } from 'fastify'
+import { requireAdmin } from '../../../shared/hooks/authenticate'
 import {
-	requestMagicLinkController,
-	verifyMagicLinkController,
+	forgotAdminPasswordController,
+	getAdminMeController,
+	loginAdminController,
+	resetAdminPasswordController,
 } from './admin-auth.controller'
 
 export async function adminAuthRoutes(app: FastifyInstance) {
 	app.post(
-		'/request-link',
+		'/login',
 		{
 			config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
 		},
-		requestMagicLinkController,
+		loginAdminController,
 	)
 
-	app.get(
-		'/verify',
+	app.post(
+		'/forgot-password',
 		{
-			config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+			config: { rateLimit: { max: 3, timeWindow: '15 minutes' } },
 		},
-		verifyMagicLinkController,
+		forgotAdminPasswordController,
 	)
+
+	app.post(
+		'/reset-password',
+		{
+			config: { rateLimit: { max: 5, timeWindow: '15 minutes' } },
+		},
+		resetAdminPasswordController,
+	)
+
+	app.get('/me', { onRequest: [requireAdmin] }, getAdminMeController)
 }

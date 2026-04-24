@@ -1,4 +1,5 @@
 import { randomBytes } from 'crypto'
+import { Prisma } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import { AppError } from '../../shared/errors/app-error'
 import { generateCredentialsPDF } from '../../shared/lib/pdf'
@@ -44,26 +45,39 @@ export function buildPatientCredentialsFilename(name: string, date = new Date())
 
 export async function createPatient(data: CreatePatientInput): Promise<Buffer> {
 	const existing = await prisma.patient.findUnique({ where: { cpf: data.cpf } })
-	if (existing) throw new AppError('CPF já cadastrado')
+	if (existing) throw new AppError('CPF ja cadastrado')
 
 	const rawPassword = generatePassword()
 	const hashedPassword = await bcrypt.hash(rawPassword, 10)
-
-	const patient = await prisma.patient.create({
-		data: {
-			name: data.name,
-			cpf: data.cpf,
-			birthDate: new Date(data.birthDate),
-			password: hashedPassword,
-		},
-	})
-
-	return generateCredentialsPDF({
-		name: patient.name,
-		cpf: patient.cpf,
+	const pdfBuffer = await generateCredentialsPDF({
+		name: data.name,
+		cpf: data.cpf,
 		password: rawPassword,
 		accessUrl: process.env.PATIENT_ACCESS_URL!,
 	})
+
+	try {
+		await prisma.patient.create({
+			data: {
+				name: data.name,
+				cpf: data.cpf,
+				whatsapp: data.whatsapp,
+				birthDate: new Date(data.birthDate),
+				password: hashedPassword,
+			},
+		})
+	} catch (error) {
+		if (
+			error instanceof Prisma.PrismaClientKnownRequestError &&
+			error.code === 'P2002'
+		) {
+			throw new AppError('CPF ja cadastrado')
+		}
+
+		throw error
+	}
+
+	return pdfBuffer
 }
 
 export async function regeneratePatientCredentials(id: string): Promise<Buffer> {
@@ -76,7 +90,7 @@ export async function regeneratePatientCredentials(id: string): Promise<Buffer> 
 		},
 	})
 
-	if (!patient) throw new AppError('Paciente não encontrado', 404)
+	if (!patient) throw new AppError('Paciente nao encontrado', 404)
 
 	return generatePatientCredentialsPDF(patient)
 }
@@ -87,25 +101,27 @@ export async function getPatientCredentialsFilename(id: string): Promise<string>
 		select: { name: true },
 	})
 
-	if (!patient) throw new AppError('Paciente não encontrado', 404)
+	if (!patient) throw new AppError('Paciente nao encontrado', 404)
 
 	return buildPatientCredentialsFilename(patient.name)
 }
 
 export async function updatePatient(id: string, data: UpdatePatientInput) {
 	const patient = await prisma.patient.findUnique({ where: { id } })
-	if (!patient) throw new AppError('Paciente não encontrado', 404)
+	if (!patient) throw new AppError('Paciente nao encontrado', 404)
 
 	return prisma.patient.update({
 		where: { id },
 		data: {
 			...(data.name && { name: data.name }),
+			...(Object.hasOwn(data, 'whatsapp') && { whatsapp: data.whatsapp ?? null }),
 			...(data.birthDate && { birthDate: new Date(data.birthDate) }),
 		},
 		select: {
 			id: true,
 			name: true,
 			cpf: true,
+			whatsapp: true,
 			birthDate: true,
 			updatedAt: true,
 		},
@@ -118,6 +134,7 @@ export async function listPatients() {
 			id: true,
 			name: true,
 			cpf: true,
+			whatsapp: true,
 			birthDate: true,
 			createdAt: true,
 		},
@@ -132,12 +149,13 @@ export async function getPatient(id: string) {
 			id: true,
 			name: true,
 			cpf: true,
+			whatsapp: true,
 			birthDate: true,
 			createdAt: true,
 		},
 	})
 
-	if (!patient) throw new AppError('Paciente não encontrado', 404)
+	if (!patient) throw new AppError('Paciente nao encontrado', 404)
 
 	return patient
 }

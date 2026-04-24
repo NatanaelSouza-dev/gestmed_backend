@@ -2,6 +2,7 @@ import {
 	S3Client,
 	PutObjectCommand,
 	GetObjectCommand,
+	DeleteObjectCommand,
 } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 
@@ -41,4 +42,13 @@ export async function getPresignedDownloadUrl(
 		ResponseContentDisposition: `attachment; filename="${filename}"`,
 	})
 	return getSignedUrl(r2, command, { expiresIn: 3600 })
+}
+
+export async function deleteFile(key: string): Promise<void> {
+	await r2.send(
+		new DeleteObjectCommand({
+			Bucket: bucket,
+			Key: key,
+		}),
+	)
 }

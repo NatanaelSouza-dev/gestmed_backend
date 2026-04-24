@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { requireAdmin } from '../../shared/hooks/authenticate'
+import { requireAdminScreen } from '../../shared/hooks/authenticate'
 import {
 	createPatientController,
 	getPatientController,
@@ -9,7 +9,7 @@ import {
 } from './patient.controller'
 
 export async function patientRoutes(app: FastifyInstance) {
-	app.addHook('onRequest', requireAdmin)
+	app.addHook('onRequest', requireAdminScreen('patients'))
 
 	app.post('/', createPatientController)
 	app.post('/:id/regenerate-credentials', regeneratePatientCredentialsController)

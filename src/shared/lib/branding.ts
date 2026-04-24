@@ -14,8 +14,23 @@ const LOGO_FILES = {
 	},
 } as const
 
-function readPublicAsset(filename: string): Buffer {
-	return fs.readFileSync(path.join(publicDir, filename))
+function resolveExistingAssetPath(...filenames: string[]): string {
+	for (const filename of filenames) {
+		const fullPath = path.join(publicDir, filename)
+		if (fs.existsSync(fullPath)) {
+			return fullPath
+		}
+	}
+
+	throw new Error(`Asset nao encontrado: ${filenames.join(', ')}`)
+}
+
+function readPublicAsset(...filenames: string[]): Buffer {
+	return fs.readFileSync(resolveExistingAssetPath(...filenames))
+}
+
+function getPublicAssetPath(...filenames: string[]): string {
+	return resolveExistingAssetPath(...filenames)
 }
 
 function getEmailAssetsBaseUrl(): string | null {
@@ -46,8 +61,14 @@ function getEmailAssetsBaseUrl(): string | null {
 
 export function getPdfLogos() {
 	return {
-		gestmed: readPublicAsset(LOGO_FILES.gestmed.pdf.filename),
-		hamilton: readPublicAsset(LOGO_FILES.hamilton.pdf.filename),
+		gestmed: readPublicAsset(
+			LOGO_FILES.gestmed.pdf.filename,
+			LOGO_FILES.gestmed.email.filename,
+		),
+		hamilton: readPublicAsset(
+			LOGO_FILES.hamilton.pdf.filename,
+			LOGO_FILES.hamilton.email.filename,
+		),
 	}
 }
 
@@ -84,23 +105,29 @@ export function getEmailLogoAttachments() {
 export function getPublicAssets() {
 	return {
 		'logo.png': {
-			path: path.join(publicDir, LOGO_FILES.gestmed.pdf.filename),
+			path: getPublicAssetPath(
+				LOGO_FILES.gestmed.pdf.filename,
+				LOGO_FILES.gestmed.email.filename,
+			),
 			contentType: LOGO_FILES.gestmed.pdf.mimeType,
 		},
 		'logo_ham.png': {
-			path: path.join(publicDir, LOGO_FILES.hamilton.pdf.filename),
+			path: getPublicAssetPath(
+				LOGO_FILES.hamilton.pdf.filename,
+				LOGO_FILES.hamilton.email.filename,
+			),
 			contentType: LOGO_FILES.hamilton.pdf.mimeType,
 		},
 		'logo_email.png': {
-			path: path.join(publicDir, LOGO_FILES.gestmed.email.filename),
+			path: getPublicAssetPath(LOGO_FILES.gestmed.email.filename),
 			contentType: LOGO_FILES.gestmed.email.mimeType,
 		},
 		'logo_ham_email.png': {
-			path: path.join(publicDir, LOGO_FILES.hamilton.email.filename),
+			path: getPublicAssetPath(LOGO_FILES.hamilton.email.filename),
 			contentType: LOGO_FILES.hamilton.email.mimeType,
 		},
 		'logo_ham.webp': {
-			path: path.join(publicDir, LOGO_FILES.hamilton.web.filename),
+			path: getPublicAssetPath(LOGO_FILES.hamilton.web.filename),
 			contentType: LOGO_FILES.hamilton.web.mimeType,
 		},
 	} as const

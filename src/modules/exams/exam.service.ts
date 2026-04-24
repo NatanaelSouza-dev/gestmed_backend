@@ -1,6 +1,10 @@
 import { randomBytes } from 'crypto'
 import { prisma } from '../../shared/lib/prisma'
-import { uploadFile, getPresignedDownloadUrl } from '../../shared/lib/r2'
+import {
+	uploadFile,
+	getPresignedDownloadUrl,
+	deleteFile,
+} from '../../shared/lib/r2'
 import { AppError } from '../../shared/errors/app-error'
 import type { CreateExamInput } from './exam.schema'
 
@@ -61,6 +65,19 @@ export async function getExamDownloadUrl(
 	const url = await getPresignedDownloadUrl(exam.fileKey, filename)
 
 	return { url }
+}
+
+export async function deleteExam(examId: string) {
+	const exam = await prisma.exam.findUnique({
+		where: { id: examId },
+	})
+
+	if (!exam) throw new AppError('Exame não encontrado', 404)
+
+	await deleteFile(exam.fileKey)
+	await prisma.exam.delete({
+		where: { id: examId },
+	})
 }
 
 function formatExam(exam: {
