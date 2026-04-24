@@ -60,7 +60,10 @@ export async function createAdmin(data: CreateAdminInput) {
 
 		await sendAdminWelcomeEmail(admin.email, admin.name, rawPassword)
 
-		return withScreens(admin)
+		return {
+			admin: withScreens(admin),
+			rawPassword,
+		}
 	} catch (error) {
 		handleUniqueError(error)
 	}
