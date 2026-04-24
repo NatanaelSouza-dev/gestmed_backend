@@ -1,9 +1,19 @@
+import { randomBytes } from 'crypto'
 import { Prisma, type AdminProfile } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import { getScreensForProfile } from '../../shared/auth/admin-access'
 import { AppError } from '../../shared/errors/app-error'
 import { prisma } from '../../shared/lib/prisma'
+import { sendAdminWelcomeEmail } from '../../shared/lib/resend'
 import type { CreateAdminInput, UpdateAdminInput } from './admin.schema'
+
+const PASSWORD_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+
+function generatePassword(length = 10): string {
+	return Array.from(randomBytes(length))
+		.map((byte) => PASSWORD_CHARS[byte % PASSWORD_CHARS.length])
+		.join('')
+}
 
 function buildAdminSelect() {
 	return {
@@ -34,7 +44,8 @@ function handleUniqueError(error: unknown): never {
 }
 
 export async function createAdmin(data: CreateAdminInput) {
-	const passwordHash = await bcrypt.hash(data.password, 10)
+	const rawPassword = generatePassword()
+	const passwordHash = await bcrypt.hash(rawPassword, 10)
 
 	try {
 		const admin = await prisma.admin.create({
@@ -46,6 +57,8 @@ export async function createAdmin(data: CreateAdminInput) {
 			},
 			select: buildAdminSelect(),
 		})
+
+		await sendAdminWelcomeEmail(admin.email, admin.name, rawPassword)
 
 		return withScreens(admin)
 	} catch (error) {

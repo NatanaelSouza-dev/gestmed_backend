@@ -7,8 +7,8 @@ const emailLogos = getEmailLogos()
 type EmailTemplateParams = {
 	title: string
 	intro: string
-	buttonLabel: string
-	buttonUrl: string
+	buttonLabel?: string
+	buttonUrl?: string
 	helperText: string
 }
 
@@ -30,8 +30,8 @@ function buildEmailTemplate({
 }: EmailTemplateParams): string {
 	const safeTitle = escapeHtml(title)
 	const safeIntro = escapeHtml(intro)
-	const safeButtonLabel = escapeHtml(buttonLabel)
-	const safeButtonUrl = escapeHtml(buttonUrl)
+	const safeButtonLabel = buttonLabel ? escapeHtml(buttonLabel) : null
+	const safeButtonUrl = buttonUrl ? escapeHtml(buttonUrl) : null
 	const safeHelperText = escapeHtml(helperText)
 	const logoMarkup = emailLogos.gestmed
 		? `
@@ -48,6 +48,20 @@ function buildEmailTemplate({
           </div>
         `
 
+	const buttonMarkup =
+		safeButtonLabel && safeButtonUrl
+			? `
+              <div style="margin:0 0 24px">
+                <a
+                  href="${safeButtonUrl}"
+                  style="display:inline-block;background:#1d4ed8;color:#ffffff;padding:14px 24px;border-radius:12px;text-decoration:none;font-size:16px;font-weight:700"
+                >
+                  ${safeButtonLabel}
+                </a>
+              </div>
+            `
+			: ''
+
 	return `
       <div style="margin:0;padding:32px 16px;background:#f3f7fb;font-family:Arial,sans-serif;color:#0f172a">
         <div style="max-width:560px;margin:0 auto">
@@ -63,14 +77,7 @@ function buildEmailTemplate({
               <p style="margin:0 0 24px;font-size:16px;line-height:1.7;color:#334155">
                 ${safeIntro}
               </p>
-              <div style="margin:0 0 24px">
-                <a
-                  href="${safeButtonUrl}"
-                  style="display:inline-block;background:#1d4ed8;color:#ffffff;padding:14px 24px;border-radius:12px;text-decoration:none;font-size:16px;font-weight:700"
-                >
-                  ${safeButtonLabel}
-                </a>
-              </div>
+              ${buttonMarkup}
               <div style="padding:16px 18px;border:1px solid #dbeafe;border-radius:14px;background:#f8fbff">
                 <p style="margin:0;font-size:14px;line-height:1.7;color:#475569">
                   ${safeHelperText}
@@ -133,5 +140,30 @@ export async function sendAdminPasswordResetEmail(
 			'Recebemos uma solicitação para redefinir a senha da área administrativa.\n' +
 			'Este link expira em 15 minutos.\n' +
 			'Se você não solicitou esta alteração, ignore este e-mail.',
+	})
+}
+
+export async function sendAdminWelcomeEmail(
+	email: string,
+	name: string,
+	password: string,
+): Promise<void> {
+	await resend.emails.send({
+		from: process.env.RESEND_FROM_EMAIL!,
+		to: email,
+		subject: 'Seu acesso administrativo - GestMed Exames',
+		html: buildEmailTemplate({
+			title: 'Sua conta administrativa foi criada',
+			intro: `Ola, ${name}. Seu acesso ao painel administrativo foi liberado.`,
+			helperText:
+				`Use o e-mail ${email} e a senha provisoria ${password} para entrar. ` +
+				'Por seguranca, recomendamos alterar essa senha no primeiro acesso.',
+		}),
+		text:
+			`Ola, ${name}.\n\n` +
+			'Sua conta administrativa foi criada.\n' +
+			`E-mail: ${email}\n` +
+			`Senha provisoria: ${password}\n\n` +
+			'Recomendamos alterar essa senha no primeiro acesso.',
 	})
 }
